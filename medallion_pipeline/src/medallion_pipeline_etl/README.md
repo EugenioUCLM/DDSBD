@@ -1,20 +1,31 @@
-# medallion_pipeline
+# ETL Pipeline
 
-This folder defines all source code for the medallion_pipeline pipeline:
+Este directorio contiene el código fuente principal del pipeline de datos, organizado según la arquitectura de Medallion y diseñado para ejecutarse sobre **Delta Live Tables (DLT)**.
 
-- `explorations/`: Ad-hoc notebooks used to explore the data processed by this pipeline.
-- `transformations/`: All dataset definitions and transformations.
-- `utilities/` (optional): Utility functions and Python modules used in this pipeline.
-- `data_sources/` (optional): View definitions describing the source data for this pipeline.
+## 📂 Estructura del Directorio
 
-## Getting Started
+### 1. [rules/](./rules/)
+Contiene la lógica declarativa de las **Expectations** (reglas de calidad).
+* `customers.py`: Validaciones para perfiles de usuario (edad, tipos de usuario).
+* `labels.py`: Reglas para la integridad de la variable objetivo.
+* `transactions.py`: Validaciones financieras para los eventos de carrito.
 
-To get started, go to the `transformations` folder -- most of the relevant source code lives there:
+### 2. [transformations/](./transformations/)
+Implementación de las tres capas de procesamiento de datos:
+* **`01_bronze_ingestion.py`**: Ingesta incremental desde la `landing_zone` hacia Delta.
+* **`02_silver_transformation.py`**: Limpieza de datos (DLQ), gestión de históricos **SCD Tipo 2** y unión de flujos con **Watermarks**.
+* **`03_gold_customer_aggregations.py`**: Generación de características de comportamiento mediante ventanas rodantes (1h, 24h, 7d, 30d).
+* **`03_gold_customer_profile.py`**: Vista materializada de perfiles estáticos optimizada para el Feature Store.
+* **`03_gold_abandonment_spine.py`**: Tabla ancla (Spine) con etiquetas y características en tiempo real para entrenamiento.
 
-* By convention, every dataset under `transformations` is in a separate file.
-* Take a look at the sample called "sample_trips_medallion_pipeline.py" to get familiar with the syntax.
-  Read more about the syntax at https://docs.databricks.com/dlt/python-ref.html.
-* If you're using the workspace UI, use `Run file` to run and preview a single transformation.
-* If you're using the CLI, use `databricks bundle run medallion_pipeline_etl --select sample_trips_medallion_pipeline` to run a single transformation.
+### 3. [notebooks/](./notebooks/)
+Tareas de orquestación post-pipeline:
+* **`04_Feature_Store_Registration.py`**: Sincronización incremental de la capa Oro con el **Online Feature Store** (Lakebase) para inferencia de baja latencia.
 
-For more tutorials and reference material, see https://docs.databricks.com/dlt.
+## 🛠️ Tecnologías Utilizadas
+* **Delta Live Tables (DLT)**: Orquestación de dependencias y flujo de datos.
+* **Unity Catalog**: Gobernanza y registro de Feature Tables.
+* **Change Data Feed (CDF)**: Propagación eficiente de cambios hacia el almacén online.
+
+## 📋 Requisitos de Ejecución
+Este código debe configurarse en un **Databricks Job** que encadene el pipeline DLT de transformaciones con el notebook de registro en el Feature Store, asegurando la coherencia temporal (*Point-in-Time*) de los datos.
