@@ -140,3 +140,5 @@ def bronze_labels_flow():
         .withColumn("ingestion_timestamp", current_timestamp())
         .withColumn("source_file", col("_metadata.file_path"))
     )
+
+# Sincronización con GitHub
